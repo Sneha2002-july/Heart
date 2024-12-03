@@ -1,0 +1,126 @@
+import javax.swing.*;
+import java.awt.*;
+import java.util.ArrayList;
+import java.util.Random;
+import java.util.Timer;
+import java.util.TimerTask;
+
+// Main Class
+public class ScalableHeartbeatMonitor {
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> {
+            HeartbeatMonitorGUI gui = new HeartbeatMonitorGUI();
+            gui.startMonitoring();
+        });
+    }
+}
+
+// GUI Class
+class HeartbeatMonitorGUI {
+    private JFrame frame;
+    private HeartRateGraph graphPanel;
+    private JLabel heartRateLabel;
+    private HeartbeatSimulator simulator;
+
+    public HeartbeatMonitorGUI() {
+        setupGUI();
+    }
+
+    private void setupGUI() {
+        frame = new JFrame("Scalable Heartbeat Monitor");
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setSize(800, 600);
+        frame.setLayout(new BorderLayout());
+
+        // Top Panel: Display current heart rate
+        JPanel topPanel = new JPanel();
+        heartRateLabel = new JLabel("Heart Rate: -- BPM");
+        heartRateLabel.setFont(new Font("Arial", Font.BOLD, 24));
+        topPanel.add(heartRateLabel);
+        frame.add(topPanel, BorderLayout.NORTH);
+
+        // Graph Panel
+        graphPanel = new HeartRateGraph();
+        frame.add(graphPanel, BorderLayout.CENTER);
+
+        // Initialize simulator (can be replaced with real data source)
+        simulator = new HeartbeatSimulator(graphPanel, heartRateLabel);
+
+        frame.setVisible(true);
+    }
+
+    public void startMonitoring() {
+        simulator.start();
+    }
+}
+
+// Heartbeat Simulator Class
+class HeartbeatSimulator {
+    private Timer timer;
+    private Random random;
+    private HeartRateGraph graph;
+    private JLabel heartRateLabel;
+
+    public HeartbeatSimulator(HeartRateGraph graph, JLabel heartRateLabel) {
+        this.graph = graph;
+        this.heartRateLabel = heartRateLabel;
+        this.random = new Random();
+        this.timer = new Timer();
+    }
+
+    public void start() {
+        timer.scheduleAtFixedRate(new TimerTask() {
+            @Override
+            public void run() {
+                // Simulate heart rate between 50 and 120 BPM
+                int simulatedHeartRate = 50 + random.nextInt(70);
+                graph.addHeartRate(simulatedHeartRate);
+                heartRateLabel.setText("Heart Rate: " + simulatedHeartRate + " BPM");
+            }
+        }, 0, 1000); // Update every second
+    }
+}
+
+// Heart Rate Graph Class
+class HeartRateGraph extends JPanel {
+    private static final int MAX_POINTS = 50; // Maximum data points on the graph
+    private ArrayList<Integer> heartRates;
+
+    public HeartRateGraph() {
+        heartRates = new ArrayList<>();
+        setPreferredSize(new Dimension(800, 500));
+        setBackground(Color.BLACK);
+    }
+
+    public void addHeartRate(int rate) {
+        heartRates.add(rate);
+        if (heartRates.size() > MAX_POINTS) {
+            heartRates.remove(0); // Maintain sliding window
+        }
+        repaint(); // Repaint the graph with updated data
+    }
+
+    @Override
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+
+        if (heartRates.isEmpty()) return;
+
+        Graphics2D g2d = (Graphics2D) g;
+        g2d.setColor(Color.GREEN);
+        g2d.setStroke(new BasicStroke(2));
+
+        int width = getWidth();
+        int height = getHeight();
+        int step = width / MAX_POINTS;
+
+        for (int i = 1; i < heartRates.size(); i++) {
+            int x1 = (i - 1) * step;
+            int y1 = height - (heartRates.get(i - 1) * height / 150); // Scale heart rate
+            int x2 = i * step;
+            int y2 = height - (heartRates.get(i) * height / 150); // Scale heart rate
+            g2d.drawLine(x1, y1, x2, y2);
+        }
+    }
+}
